@@ -1,0 +1,83 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: info, health, metrics, prometheus
+server:
+  port: 8088
+spring:
+  cloud:
+    stream:
+      default:
+        producer:
+          useNativeEncoding: true
+        consumer:
+          useNativeEncoding: true
+          configuration:
+            key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
+            value.deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+            schema.registry.url: http://localhost:8081
+      bindings:
+        avro:
+          destination: product
+          content-type: application/*+avro
+          group: product-avro-consumer
+          concurrency: 1
+        avro_generic:
+          destination: product
+          content-type: application/*+avro
+          group: product-avro-generic-consumer
+          concurrency: 1
+        plain:
+          destination: product-plain
+          content-type: application/json
+          group: product-plain-consumer
+          concurrency: 1
+      schemaRegistryClient:
+        endpoint: http://localhost:8081
+      kafka:
+        streams:
+          binder:
+            serdeError: sendToDlq
+        binder:
+          configuration:
+            security.protocol: SASL_SSL #change this SASL_PLAINTEXT if SSL is not enabled for the brokers
+            sasl.mechanism: PLAIN
+          jaas:
+            loginModule: org.apache.kafka.common.security.plain.PlainLoginModule
+            options:
+              username: ${kafka_username}
+              password: ${kafka_password}
+          brokers: localhost:9093
+        bindings:
+          avro:
+            consumer:
+              enableDlq: true
+              dlqName: product-dead-letter
+              autoCommitOnError: true
+              autoCommitOffset: true
+              configuration:
+                key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
+                value.deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+                schema.registry.url: http://localhost:8081
+                specific.avro.reader: true
+          avro_generic:
+            consumer:
+              enableDlq: true
+              dlqName: product-dead-letter
+              autoCommitOnError: true
+              autoCommitOffset: true
+              configuration:
+                key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
+                value.deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+                schema.registry.url: http://localhost:8081
+                specific.avro.reader: false
+          plain:
+            consumer:
+              enableDlq: true
+              dlqName: product-plain-dead-letter
+              autoCommitOnError: true
+              autoCommitOffset: true
+              configuration:
+                key.deserializer: org.apache.kafka.common.serialization.StringDeserializer
+                value.deserializer: org.apache.kafka.common.serialization.StringDeserializer
